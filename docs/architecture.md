@@ -1,35 +1,34 @@
 # Arsitektur D1: NYC Taxi ELT
 
 ```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, Segoe UI, sans-serif","fontSize":"16px","lineColor":"#64748b","textColor":"#1e293b","edgeLabelBackground":"#f8fafc"},"flowchart":{"curve":"basis","nodeSpacing":30,"rankSpacing":45,"padding":12}}}%%
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, Segoe UI, sans-serif","fontSize":"16px","lineColor":"#64748b","textColor":"#1e293b","edgeLabelBackground":"#f8fafc"},"flowchart":{"curve":"step","nodeSpacing":40,"rankSpacing":50,"padding":12}}}%%
 flowchart TB
     TLC(["🗽 <b>NYC TLC</b><br/>Yellow Taxi Parquet"]):::source
     RAWF[("📁 <b>data/raw</b><br/>file Parquet")]:::storage
 
-    TLC -->|"Airflow DAG<br/>1 bulan per run"| RAWF
-
     subgraph DUCK["🦆 Jalur Lokal · DuckDB"]
-        direction TB
         RAW[("🥉 <b>raw</b><br/>yellow_trips")]:::raw
         CLEAN[("🥈 <b>clean</b><br/>yellow_trips")]:::clean
         MARTS["🥇 <b>analytics</b><br/>stg_yellow_trips<br/>dim_zone · dim_payment_type<br/>dim_date · fct_trips"]:::mart
-        RAW -->|"dedup + aturan kualitas"| CLEAN
-        CLEAN -->|"dbt · dev"| MARTS
     end
 
-    RAWF -->|"elt.py"| RAW
-
-    MARTS -->|"export Parquet +<br/>build_metabase_db.py"| MBDB[("🗄️ <b>marts.duckdb</b>")]:::storage
-    MBDB --> MB(["📈 <b>Metabase</b><br/>Dashboard NYC Taxi"]):::bi
+    MBDB[("🗄️ <b>marts.duckdb</b>")]:::storage
+    MB(["📈 <b>Metabase</b><br/>Dashboard NYC Taxi"]):::bi
 
     subgraph BQ["☁️ Jalur Cloud · BigQuery"]
-        direction TB
         BQC[("🥈 <b>clean</b><br/>Taxi.clean_yellow_trips")]:::clean
         BQM["🥇 <b>analytics</b><br/>stg + dim_* + fct_trips"]:::mart
-        BQC -->|"dbt · bq"| BQM
     end
 
-    CLEAN -->|"export_clean.py<br/>+ load_bq.py"| BQC
+    %% ---- Alur (urutan edge dipakai oleh linkStyle di bawah) ----
+    TLC  -->|"Airflow DAG · 1 bulan per run"| RAWF
+    RAWF -->|"elt.py"| RAW
+    RAW  -->|"dedup + aturan kualitas"| CLEAN
+    CLEAN -->|"dbt · dev"| MARTS
+    MARTS -->|"export Parquet + build_metabase_db.py"| MBDB
+    MBDB --> MB
+    CLEAN -.->|"☁️ export_clean.py + load_bq.py"| BQC
+    BQC  -->|"dbt · bq"| BQM
 
     classDef source  fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#075985
     classDef storage fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#334155
@@ -40,4 +39,9 @@ flowchart TB
 
     style DUCK fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,stroke-dasharray:5 5,color:#92400e
     style BQ   fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,stroke-dasharray:5 5,color:#1e3a8a
+
+    linkStyle 3 stroke:#f59e0b,stroke-width:3px
+    linkStyle 4,5 stroke:#16a34a,stroke-width:3px
+    linkStyle 6 stroke:#3b82f6,stroke-width:3px,stroke-dasharray:6 4
+    linkStyle 7 stroke:#3b82f6,stroke-width:3px
 ```
