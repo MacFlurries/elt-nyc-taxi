@@ -1,0 +1,33 @@
+# lingkungan Python
+.venv/
+.venv-metabase/
+__pycache__/
+*.pyc
+
+# data dan database
+data/
+warehouse/
+metabase_data/
+*.duckdb
+*.parquet
+
+# Airflow
+logs/
+config/
+.env
+
+# dbt
+dbt_taxi/target/
+dbt_taxi/logs/
+dbt_taxi/dbt_packages/
+# dbt: id pengguna lokal
+dbt_taxi/.user.yml
+
+# data TLC: lisensi belum terverifikasi, unduh sendiri (lihat README)
+dbt_taxi/seeds/taxi_zone_lookup.csv
+
+# dbt: id pengguna lokal
+dbt_taxi/.user.yml
+
+# data TLC: lisensi belum terverifikasi, unduh sendiri (lihat README)
+dbt_taxi/seeds/taxi_zone_lookup.csv

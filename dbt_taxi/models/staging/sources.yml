@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: clean
+    schema: "{{ 'clean' if target.type == 'duckdb' else 'Taxi' }}"
+    tables:
+      - name: yellow_trips
+        identifier: "{{ 'yellow_trips' if target.type == 'duckdb' else 'clean_yellow_trips' }}"

@@ -1,0 +1,14 @@
+dbt_taxi:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../warehouse/taxi.duckdb
+      schema: analytics
+    bq:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT_ID', 'your-gcp-project-id') }}"
+      dataset: analytics
+      location: asia-southeast1
+      threads: 1
