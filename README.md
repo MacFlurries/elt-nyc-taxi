@@ -1,13 +1,17 @@
 # NYC Taxi ELT Pipeline
 
-An ELT pipeline for NYC TLC Yellow Taxi trip data (Parquet).
-It downloads data monthly, cleans it in DuckDB, builds a star schema with dbt,
-and shows the result in a Metabase dashboard.
-The same dbt models also run on BigQuery sandbox.
+## Background
 
-This is my first time using these tools. I was used to the native approach:
-pulling data out of website HTML. Learning Data Engineering with Airflow, dbt,
-and DuckDB felt like a breath of fresh air, and trying new tools was fun.
+Before this project, I mostly collected data by pulling it out of website HTML.
+I also worked with APIs and with automation using libraries and tools
+([ISI: tulis library atau alat yang benar-benar Anda pakai]).
+Those were scripts I ran by hand, one job at a time.
+
+This was my first time building a full pipeline with Airflow, dbt, and DuckDB.
+The data here is not scraped and not from an API. The TLC publishes monthly
+Parquet files at public URLs, and an Airflow job downloads them. The new part
+for me was the structure around the data: scheduling, layers, tests, and proof
+that a re-run is safe.
 
 Architecture diagram: [docs/architecture.md](docs/architecture.md)
 
@@ -180,53 +184,22 @@ No map: `dim_zone` has no coordinates. Metabase pivot tables only work with ques
 - Only the download step runs in Airflow. The other steps are manual scripts.
 - The Metabase setup is not saved permanently. If the container is deleted, you must set up again.
 
-## What I learned
+## What I learned: the process, step by step
 
-**Pipelines should be safe to re-run.**
-I designed each layer so that running it again gives the same result: skip a
-file that already exists, or delete one month and insert it again. Then I
-checked it with evidence (file modified times did not change after a re-run).
-"It should be idempotent" is not the same as "I showed it is idempotent".
+This is the order I worked in. I now see it as a general process for a data pipeline.
 
-**ELT with separate layers.**
-Keeping `raw` (data as is) apart from `clean` (rules applied) means I can fix a
-rule and rebuild without downloading again. I looked at the data first and
-counted the problems before writing any cleaning rule.
+1. **Check the source first.** Read the data dictionary, find the real file URLs, and check the license. (License here: not verified.)
+2. **Ingest so that a re-run is safe.** One month per run, skip files that exist, write to a temp file then rename. Then prove it: re-run and check that the files did not change.
+3. **Profile before you clean.** Count the problems (duplicates, distance of 0 or less, dropoff before pickup, pickup outside the month) before writing any rule.
+4. **Keep layers apart.** `raw` keeps the data as is. `clean` applies the rules. If a rule is wrong, rebuild `clean` from `raw` without downloading again.
+5. **Model for questions.** Staging renames columns. Marts build the star schema: 1 fact and 3 dimensions. The data has no trip ID, so I built a key from a hash of columns and checked that it is unique.
+6. **Test the data automatically.** Keys (`unique`, `not_null`), links between tables (`relationships`), and business rules (custom SQL tests). [ISI HASIL SETELAH DIKERJAKAN] tests passed.
+7. **Run it on a second engine.** The same dbt models ran on BigQuery. Dialects differ (hash and date functions, table names), so I used `target.type` branches. I compared row counts across the two engines.
+8. **Serve the result.** A Metabase dashboard reads a read-only copy of the marts. Version compatibility (the DuckDB driver) was a real constraint.
+9. **Make it reproducible and honest.** Pinned versions in `requirements.txt`, run steps in the README, an architecture diagram, and a list of limitations.
+10. **Protect and clean up.** No secrets or project IDs in the code, a `.gitignore` for data and local files, a check of what Git will upload before the first commit, and removal of local files that can be rebuilt.
 
-**dbt makes SQL testable.**
-Staging, marts, and a star schema gave the SQL a clear structure. Data tests
-(`unique`, `not_null`, `relationships`, and custom SQL tests) check the data
-every time the pipeline runs.
-
-**SQL dialects are different.**
-The same dbt model needed small changes between DuckDB and BigQuery: hash
-functions, date functions, and table names. I handled them with
-`target.type` branches and kept the working DuckDB branch untouched. I also
-hit a template bug (a leftover comma) that I only found by reading the
-compiled SQL.
-
-**Version compatibility matters.**
-The Metabase DuckDB driver needs a matching DuckDB version, so I rebuilt the
-database file in a separate environment with DuckDB 1.5.6.
-
-**Free tiers have rules.**
-BigQuery sandbox tables expire after 60 days and DML is not supported. I
-designed the BigQuery variant to be rebuilt from files, and I did not enable
-billing.
-
-**Keep secrets and project IDs out of the code.**
-I moved the GCP project ID into an environment variable, used login-based
-credentials instead of a key file, and checked what Git would upload before the
-first commit.
-
-**Docker details.**
-Containers only see the folders you mount. Airflow could not write to my laptop
-until I added a volume for `data/`.
-
-**Verify, do not assume.**
-Many of my first attempts failed for small reasons: wrong shell, wrong
-folder, a placeholder I forgot to replace. Reading the exact error message
-and checking each result before moving on saved the most time.
+The common thread: do not trust a result until you have checked it with evidence.
 
 ## Adapting this project
 
