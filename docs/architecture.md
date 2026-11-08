@@ -1,30 +1,32 @@
 # Arsitektur D1: NYC Taxi ELT
 
 ```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, Segoe UI, sans-serif","fontSize":"14px","lineColor":"#64748b"},"flowchart":{"curve":"basis","nodeSpacing":40,"rankSpacing":70}}}%%
-flowchart LR
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, Segoe UI, sans-serif","fontSize":"16px","lineColor":"#64748b","textColor":"#1e293b","edgeLabelBackground":"#f8fafc"},"flowchart":{"curve":"basis","nodeSpacing":30,"rankSpacing":45,"padding":12}}}%%
+flowchart TB
     TLC(["🗽 <b>NYC TLC</b><br/>Yellow Taxi Parquet"]):::source
     RAWF[("📁 <b>data/raw</b><br/>file Parquet")]:::storage
 
-    TLC -->|"Airflow DAG <code>download_tlc_yellow</code><br/>1 bulan per run"| RAWF
+    TLC -->|"Airflow DAG<br/>1 bulan per run"| RAWF
 
     subgraph DUCK["🦆 Jalur Lokal · DuckDB"]
-        RAW[("🥉 <b>raw</b>.yellow_trips")]:::raw
-        CLEAN[("🥈 <b>clean</b>.yellow_trips")]:::clean
-        MARTS["🥇 <b>analytics</b><br/>stg_yellow_trips · dim_zone<br/>dim_payment_type · dim_date<br/>fct_trips"]:::mart
-        RAW -->|"dedup ROW_NUMBER<br/>+ aturan kualitas"| CLEAN
-        CLEAN -->|"dbt · target dev"| MARTS
+        direction TB
+        RAW[("🥉 <b>raw</b><br/>yellow_trips")]:::raw
+        CLEAN[("🥈 <b>clean</b><br/>yellow_trips")]:::clean
+        MARTS["🥇 <b>analytics</b><br/>stg_yellow_trips<br/>dim_zone · dim_payment_type<br/>dim_date · fct_trips"]:::mart
+        RAW -->|"dedup + aturan kualitas"| CLEAN
+        CLEAN -->|"dbt · dev"| MARTS
     end
 
-    RAWF -->|"scripts/local/elt.py"| RAW
+    RAWF -->|"elt.py"| RAW
 
-    MARTS -->|"export Parquet +<br/>build_metabase_db.py"| MBDB[("🗄️ <b>marts.duckdb</b><br/>metabase_data/")]:::storage
+    MARTS -->|"export Parquet +<br/>build_metabase_db.py"| MBDB[("🗄️ <b>marts.duckdb</b>")]:::storage
     MBDB --> MB(["📈 <b>Metabase</b><br/>Dashboard NYC Taxi"]):::bi
 
-    subgraph BQ["☁️ Jalur Cloud · BigQuery Sandbox"]
-        BQC[("Taxi.clean_yellow_trips")]:::clean
+    subgraph BQ["☁️ Jalur Cloud · BigQuery"]
+        direction TB
+        BQC[("🥈 <b>clean</b><br/>Taxi.clean_yellow_trips")]:::clean
         BQM["🥇 <b>analytics</b><br/>stg + dim_* + fct_trips"]:::mart
-        BQC -->|"dbt · target bq"| BQM
+        BQC -->|"dbt · bq"| BQM
     end
 
     CLEAN -->|"export_clean.py<br/>+ load_bq.py"| BQC
