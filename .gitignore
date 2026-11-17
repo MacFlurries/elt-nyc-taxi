@@ -31,3 +31,5 @@ dbt_taxi/.user.yml
 
 # data TLC: lisensi belum terverifikasi, unduh sendiri (lihat README)
 dbt_taxi/seeds/taxi_zone_lookup.csv
+geo/
+*.bak*

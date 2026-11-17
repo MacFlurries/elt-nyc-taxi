@@ -12,7 +12,7 @@ RAW_DIR = "/opt/airflow/data/raw"
     dag_id="download_tlc_yellow",
     schedule="@monthly",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
-    end_date=pendulum.datetime(2025, 3, 31, tz="UTC"),
+    end_date=pendulum.datetime(2025, 12, 31, tz="UTC"),
     catchup=True,
     max_active_runs=1,
     tags=["d1", "tlc"],

@@ -41,7 +41,7 @@ def load_month(path):
             FROM raw.yellow_trips WHERE file_month = '{month}'
         )
         WHERE rn = 1
-          AND trip_distance > 0
+          AND (trip_distance > 0 OR (trip_distance = 0 AND total_amount > 0))
           AND tpep_dropoff_datetime >= tpep_pickup_datetime
           AND strftime(tpep_pickup_datetime, '%Y-%m') = file_month
     """)

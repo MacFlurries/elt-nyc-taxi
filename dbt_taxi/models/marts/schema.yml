@@ -40,3 +40,7 @@ models:
           - relationships:
               to: ref('dim_payment_type')
               field: payment_type_id
+  - name: fct_fleet_hourly
+    columns:
+      - name: hour_start
+        data_tests: [unique, not_null]
